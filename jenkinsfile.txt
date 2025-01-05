@@ -1,21 +1,44 @@
 pipeline {
     agent any
 
+    environment {
+        SONARQUBE_SERVER = 'sonarqube'  
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                // Clone the Git repository
-                git url: 'https://github.com/harini1810/pipeline.git', branch: 'main' // Update with your repo URL and branch
+                script {
+                    echo 'Cloning repository...'
+                    git url: 'https://github.com/harini1810/pipeline.git', branch: 'main'
+                }
             }
         }
 
         stage('Compile') {
             steps {
                 script {
-                    // Change directory and compile the Java file
+                    echo 'Compiling Java files...'
                     bat '''
-                        javac -d target hello.java
+                        mkdir -p target
+                        javac -d target src/hello.java
                     '''
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    echo 'Running SonarQube analysis...'
+                    withSonarQubeEnv('SonarQube') {
+                        bat '''
+                            sonar-scanner -Dsonar.projectKey=YourProjectKey \
+                                          -Dsonar.sources=src \
+                                          -Dsonar.java.binaries=target \
+                                          -Dsonar.host.url=http://localhost:9000
+                        '''
+                    }
                 }
             }
         }
@@ -23,24 +46,17 @@ pipeline {
         stage('Run') {
             steps {
                 script {
-                    // Run the compiled Java program
+                    echo 'Running the Java program...'
                     bat '''
                         java -cp target hello
                     '''
                 }
             }
         }
-    }
 
-    post {
-        always {
-            echo 'Pipeline completed.'
-        }
-        success {
-            echo 'Build succeeded!'
-        }
-        failure {
-            echo 'Build failed.'
-        }
-    }
-}
+        stage('Quality Gate') {
+            steps {
+                script {
+                    echo 'Checking SonarQube Quality Gate...'
+                    timeout(time: 1, unit: 'MINUTES') {
+                        waitForQualityGate abortPipeline:
