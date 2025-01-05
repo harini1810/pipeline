@@ -34,7 +34,7 @@ pipeline {
             steps {
                 script {
                     echo 'Running SonarQube analysis...'
-                    withSonarQubeEnv('SonarQube') {
+                    withSonarQubeEnv('sonarqube') {
                         bat '''
                             sonar-scanner -Dsonar.projectKey=pipeline \
                                           -Dsonar.sources=. \
