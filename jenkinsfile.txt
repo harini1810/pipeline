@@ -2,7 +2,10 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE_SERVER = 'sonarqube'  
+        SONARQUBE_SERVER = 'sonarqube' 
+
+    tools {
+        jdk 'JDK17'  
     }
 
     stages {
@@ -33,10 +36,11 @@ pipeline {
                     echo 'Running SonarQube analysis...'
                     withSonarQubeEnv('SonarQube') {
                         bat '''
-                            sonar-scanner -Dsonar.projectKey=YourProjectKey \
-                                          -Dsonar.sources=src \
+                            sonar-scanner -Dsonar.projectKey=pipeline \
+                                          -Dsonar.sources=. \
                                           -Dsonar.java.binaries=target \
-                                          -Dsonar.host.url=http://localhost:9000
+                                          -Dsonar.host.url=http://localhost:9000 \
+                                          -Dsonar.login=sqp_c18f3a48474b177d06939a7fa065a08cfa049265
                         '''
                     }
                 }
@@ -59,4 +63,22 @@ pipeline {
                 script {
                     echo 'Checking SonarQube Quality Gate...'
                     timeout(time: 1, unit: 'MINUTES') {
-                        waitForQualityGate abortPipeline:
+                        waitForQualityGate abortPipeline: true
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed.'
+        }
+        success {
+            echo 'Build succeeded!'
+        }
+        failure {
+            echo 'Build failed. Check logs for details.'
+        }
+    }
+}
